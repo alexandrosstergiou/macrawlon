@@ -1,6 +1,6 @@
 <center>
-  <img src="images/macrawlon.png" alt="text" width="400"/><img src="images/macrawlon_icon.png" alt="icon" width="100"/>
-</center>
+  <img src="images/macralon_iconandtext.png" alt="text" width="280"/>
+<center>
 
 ### (a Multi-processing Audiovisual CRAWLer collectiON)
 
