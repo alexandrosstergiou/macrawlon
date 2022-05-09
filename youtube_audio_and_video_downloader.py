@@ -114,8 +114,6 @@ times = []
 print("\n"*3, end="")
 # Iterate over videos
 for index, row in df.iterrows():
-    if index>1000:
-        break
     ytid = row[id_idx]
     ts_start = row[start_idx]
     if end_idx is not None:
