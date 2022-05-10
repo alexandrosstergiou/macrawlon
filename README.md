@@ -61,7 +61,8 @@ download(
   id_idx = 0,
   start_idx = 1,
   end_idx = None,
-  duration=10
+  duration=10,
+  workers=5
   )
 
 ```
@@ -78,6 +79,7 @@ The function takes the following arguments:
 | `start_idx` | (optional) The index for the starting location (in secs.) in the video.|
 | `end_idx` | (optional) The index for the ending location (in secs.) in the video.|
 | `duration` | (optional) The duration (in secs.) of the video. To be used if `end_idx` is not specified.|
+| `workers` | (optional) The number of sub-processes to run.|
 
 
 -------------------------
