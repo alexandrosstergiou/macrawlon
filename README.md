@@ -4,7 +4,7 @@
 
 ### (a Multi-processing Audiovisual CRAWLer collectiON)
 
-![supported versions](https://img.shields.io/badge/python-3.x-brightgreen?style=for-the-badge&logo=python) &nbsp;  [![PyPi](https://img.shields.io/badge/pypi-yellow?style=for-the-badge&logo=pypi)](https://twitter.com/intent/tweet?text=dataset2database&video&to&sql&converter&url=https://github.com/alexandrosstergiou/dataset2database&hashtags=VideoConverter) &nbsp; ![Licence](https://img.shields.io/badge/licence-mit-gray?style=for-the-badge) &nbsp; [![Tweet](https://img.shields.io/badge/tweet-white?style=for-the-badge&logo=twitter)](https://twitter.com/intent/tweet?text=dataset2database&video&to&sql&converter&url=https://github.com/alexandrosstergiou/dataset2database&hashtags=VideoConverter)
+![supported versions](https://img.shields.io/badge/python-3.x-brightgreen?style=for-the-badge&logo=python) &nbsp;  [![PyPi](https://img.shields.io/badge/pypi-yellow?style=for-the-badge&logo=pypi)](https://twitter.com/intent/tweet?text=macrawlon🍬&video&and&audio&crawler&url=https://github.com/alexandrosstergiou/macrawlon&hashtags=VideoAudioCrawler) &nbsp; ![Licence](https://img.shields.io/badge/licence-mit-gray?style=for-the-badge) &nbsp; [![Tweet](https://img.shields.io/badge/tweet-white?style=for-the-badge&logo=twitter)](https://twitter.com/intent/tweet?text=macrawlon🍬&video&and&audio&crawler&url=https://github.com/alexandrosstergiou/macrawlon&hashtags=VideoAudioCrawler)
 
 
 ----------------------
@@ -12,7 +12,7 @@ About
 ----------------------
 
 
-A package for crawling and downloading YouTube videos. As multiple datasets that are introduced only provide the ids of videos without a download script, obtaining the video files may be difficult. This project aims to provide a general solution is such cases by downloading either the video or audio from ids specified by a dataset. I also aims to speed up processing though enabling multiple threads to run in parallel. The video resolution is user set in order to speed-up downloading and to limit the on-disk dataset size.
+A package for crawling and downloading YouTube videos. As multiple datasets that are introduced only provide the ids of videos without a download script, obtaining the video files may be difficult. This project aims to provide a general solution is such cases by downloading either the video or audio from ids specified by a dataset. It also aims to speed up processing though enabling multiple threads to run in parallel. The video resolution is user set in order to speed-up downloading and to limit the on-disk dataset size.
 
 Currently only video-only or audio-only files are downloaded (the next update/version will allow to also download videos with audio).
 
@@ -105,3 +105,9 @@ The latest stable release is also available for download through pip
 ```
 $ pip install macrawlon
 ```
+
+
+-------------------------
+Licence
+-------------------------
+MIT
