@@ -36,20 +36,41 @@ import tqdm
 '''
 def video_downloader(inp):
     ffmpeg_path, ts_start, video_url, duration, video_format, video_filepath = inp
+    tmp_video_filepath = video_filepath.split('.')[0]+'_tmp.'+video_filepath.split('.')[-1]
     # Download the video
-    video_dl_args = [ffmpeg_path, '-n',
-                    '-ss', str(ts_start),   # The beginning of the trim window
-                    '-i', str(video_url),        # The video URL
-                    '-t', str(duration),    # The video segment duration
-                    '-f', video_format,     # The video format
-                    '-framerate', '30',     # The framerate
-                    '-vcodec', 'h264',      # The output encoding
-                    video_filepath]         # The output filepath
 
-    proc = sp.Popen(video_dl_args, stdout=None, stderr=sp.PIPE)
+    command = [ffmpeg_path, '-n',
+               '-ss', str(ts_start),   # The beginning of the trim window
+               '-i', str(video_url),        # The video URL
+               '-t', str(duration),    # The video segment duration
+               '-f', video_format,     # The video format
+               '-framerate', '30',     # The framerate
+               '-vcodec', 'h264',      # The output encoding
+               video_filepath]         # The output filepath
+
+    proc = sp.Popen(command, stdout=None, stderr=sp.PIPE)
+    stdout, stderr = proc.communicate()
+    if proc.returncode != 0:
+        print(video_filepath)
+        print(stderr)
+        return
+
+    '''
+    command = ['ffmpeg',
+               '-i', '"%s"' % tmp_video_filepath,
+               '-ss', str(ts_start),
+               '-t', str(duration),
+               '-c:v', 'libx264', '-c:a', 'copy',
+               '-threads', '1',
+               '-loglevel', 'panic',
+               '"%s"' % video_filepath]
+    command = ' '.join(command)
+    proc = sp.Popen(command, stdout=None, stderr=sp.PIPE)
     stdout, stderr = proc.communicate()
     if proc.returncode != 0:
         print(stderr)
+        return
+    '''
 
     return
 '''
@@ -145,8 +166,9 @@ def get_video_audio_urls(url):
         resolutions = sorted(set(resolutions))
         idx = -1
         for res in res_options:
-            if ['mp4',res] in names:
-                idx = names.index(['mp4',res])
+            #print(['mp4',str(int(res))], ['mp4',str(int(res))] in names)
+            if ['mp4',str(int(res))] in names:
+                idx = names.index(['mp4',str(int(res))])
                 break
         #assert idx!=0 -1, f'No index found, consider including one of the following available resolutions: {resolutions} at the `res_options` argument.'
         if idx==-1:
@@ -203,102 +225,101 @@ def get_video_audio_urls(url):
 '''
 def download(
   csv_dir, download_dir, modality, resolutions=['480', '360' ,'240'],
-  id_idx = 0, start_idx = 1, end_idx = 2, duration=10, workers=5):
+  id_idx = 0, start_idx = 1, end_idx = None, duration=10, workers=5):
 
-  # Set output settings
-  audio_codec = 'flac'
-  audio_container = 'flac'
-  video_codec = 'h264'
-  video_format = 'mp4'
-  directory= download_dir
+    # Set output settings
+    audio_codec = 'flac'
+    audio_container = 'flac'
+    video_codec = 'h264'
+    video_format = 'mp4'
+    directory= download_dir
+    global res_options
+    res_options = resolutions
 
-  global res_options
-  res_options = resolutions
+    # Load the .csv file
+    df = pd.read_csv(csv_dir)
+    urls = []
+    times = []
 
-  # Load the AudioSet training set
-  df = pd.read_csv(csv_dir)
-  urls = []
-  times = []
+    print("\n"*3, end="")
+    # Iterate over videos
+    for index, row in df.iterrows():
+        ytid = row[id_idx]
+        ts_start = row[start_idx]
+        if not end_idx is None:
+            ts_end = row[end_idx]
+            duration = float(ts_start) - float(ts_end)
+        else:
+            ts_end = ts_start + duration
 
-  print("\n"*3, end="")
-  # Iterate over videos
-  for index, row in df.iterrows():
-      ytid = row[id_idx]
-      ts_start = row[start_idx]
-       if end_idx is not None:
-           ts_end = row[end_idx]
-           duration = float(ts_start) - float(ts_end)
-       else:
-           ts_end = ts_start + duration
+        ts_start, ts_end = float(ts_start), float(ts_end)
+        # Get the URL to the video page
+        video_page_url = 'https://www.youtube.com/watch?v={}'.format(ytid)
+        # filter out private and unavailable videos
+        urls.append([video_page_url,[ts_start, duration]])
+    print("\033[F"*3)
+    print(f'YouTube ID: {ytid}', f'Trim Window: ({ts_start}, {ts_end})', sep='\n')
+    print()
+    print('--- Finding available videos: ---')
+    av_urls = []
+    with Pool(workers) as pool:
+        for u in tqdm.tqdm(pool.imap_unordered(try_video, urls), total=len(urls)):
+            av_urls.append(u)
+            pass
 
-      ts_start, ts_end = float(ts_start), float(ts_end)
-      # Get the URL to the video page
-      video_page_url = 'https://www.youtube.com/watch?v={}'.format(ytid)
-      # filter out private and unavailable videos
-      urls.append([video_page_url,[ts_start, duration]])
-      print("\033[F"*3)
-      print(f'YouTube ID: {ytid}', f'Trim Window: ({ts_start}, {ts_end})', sep='\n')
-      print()
-      print('--- Finding available videos: ---')
-      av_urls = []
-      with Pool(workers) as pool:
-          for u in tqdm.tqdm(pool.imap_unordered(try_video, urls), total=len(urls)):
-              av_urls.append(u)
-              pass
-     pool.terminate()
-     pool.join()
-     av_urls = [x for x in av_urls if x]
-     print(f'Available urls: {len(av_urls)} / {len(urls)}')
-     print()
-     print('--- Finding best video and audio quality urls: ---')
-     with Pool(workers) as pool:
-         hq_urls = list(tqdm.tqdm(pool.imap_unordered(get_video_audio_urls, av_urls), total=len(av_urls)))
-     pool.terminate()
-     pool.join()
-     hq_urls = [x for x in hq_urls if x]
-     print(f'Downloadable/Public urls: {len(hq_urls)} / {len(urls)}')
-     video_urls_for_download = []
-     audio_urls_for_download = []
-     for i,v in enumerate(hq_urls):
-         yid = v[0].split('watch?v=')[-1]
+    pool.terminate()
+    pool.join()
+    av_urls = [x for x in av_urls if x]
+    print(f'Available urls: {len(av_urls)} / {len(urls)}')
+    print()
+    print('--- Finding best video and audio quality urls: ---')
+    with Pool(workers) as pool:
+        hq_urls = list(tqdm.tqdm(pool.imap_unordered(get_video_audio_urls, av_urls), total=len(av_urls)))
+    pool.terminate()
+    pool.join()
+    hq_urls = [x for x in hq_urls if x]
+    print(f'Downloadable/Public urls: {len(hq_urls)} / {len(urls)}')
+    video_urls_for_download = []
+    audio_urls_for_download = []
+    for i,v in enumerate(hq_urls):
+        yid = v[0].split('watch?v=')[-1]
+        # Create path for videos
+        if modality == 'video' or modality == 'audio-video':
+            v_path = os.path.join(directory,'video',yid+'_'+str(int(v[1][0]))+'_'+str(int(v[1][0]+v[1][1]))+'.'+video_format)
+            if not os.path.exists(os.path.join(directory,'video')):
+                os.makedirs(os.path.join(directory,'video'))
 
-
-         # Create path for videos
-         if modality == 'video' or modality == 'audio-video':
-             v_path = os.path.join(directory,'video',yid+'_'+str(int(v[1][0]))+'_'+str(int(v[1][0]+v[1][1]))+'.'+video_format)
-             if not os.path.exists(os.path.join(directory,'video')):
-                 os.makedirs(os.path.join(directory,'video'))
-
-         if modality == 'audio' or modality == 'audio-video':
+        if modality == 'audio' or modality == 'audio-video':
             a_path = os.path.join(directory,'audio',yid+'_'+str(int(v[1][0]))+'_'+str(int(v[1][0]+v[1][1]))+'.'+audio_container)
             if not os.path.exists(os.path.join(directory,'audio')):
-                 os.makedirs(os.path.join(directory,'audio'))
-         if modality == 'audio+video':
+                os.makedirs(os.path.join(directory,'audio'))
+
+        if modality == 'audio+video':
             a_path = os.path.join(directory,'video_with_audio',yid+'_'+str(int(v[1][0]))+'_'+str(int(v[1][0]+v[1][1]))+'.'+audio_container)
             if not os.path.exists(os.path.join(directory,'video_with_audio')):
                 os.makedirs(os.path.join(directory,'video_with_audio'))
 
-         if modality == 'video' or modality == 'audio-video':
-             video_urls_for_download.append([ffmpeg_path,v[1][0],v[2][0],v[1][1],video_format,v_path])
-         if modality == 'audio' or modality == 'audio-video':
-             audio_urls_for_download.append([ffmpeg_path,v[1][0],v[2][1],v[1][1],audio_codec,a_path])
-         if modality == 'audio+video':
-             video_w_audio_urls_for_download.append([ffmpeg_path,v[1][0],v[2][2],v[1][1],video_format,v_path])
-
-
-     print('--- Downloading video and audio w/ FFMPEG: ---')
-     with Pool(workers) as pool:
         if modality == 'video' or modality == 'audio-video':
-             for _ in tqdm.tqdm(pool.imap_unordered(video_downloader, video_urls_for_download), total=len(video_urls_for_download)):
-                 pass
+            video_urls_for_download.append([ffmpeg_path,v[1][0],v[2][0],v[1][1],video_format,v_path])
+        if modality == 'audio' or modality == 'audio-video':
+            audio_urls_for_download.append([ffmpeg_path,v[1][0],v[2][1],v[1][1],audio_codec,a_path])
+        if modality == 'audio+video':
+            video_w_audio_urls_for_download.append([ffmpeg_path,v[1][0],v[2][2],v[1][1],video_format,v_path])
+
+    print('--- Downloading video and audio w/ FFMPEG: ---')
+    with Pool(workers) as pool:
+        if modality == 'video' or modality == 'audio-video':
+            for _ in tqdm.tqdm(pool.imap_unordered(video_downloader, video_urls_for_download), total=len(video_urls_for_download)):
+                pass
         if modality == 'audio' or modality == 'audio-video':
             for _ in tqdm.tqdm(pool.imap_unordered(audio_downloader, audio_urls_for_download), total=len(audio_urls_for_download)):
                 pass
         if modality == 'audio+video':
             for _ in tqdm.tqdm(pool.imap_unordered(video_downloader, video_w_audio_urls_for_download), total=len(video_w_audio_urls_for_download)):
                 pass
-     pool.terminate()
-     pool.join()
+    pool.terminate()
+    pool.join()
+    return
 '''
 ---  E N D  O F  F U N C T I O N  D O W N L O A D ---
 '''
